@@ -1,0 +1,68 @@
+——————————————————————————————————————————————————————————Hbase——————————————————————————————————————————————————
+关系型数据库非常规整-----结构化数据
+图片，视屏--------------非结构化数据
+
+所有对的数据底层都是0101形势存在的-----
+
+MongoDB：文档数据库nosql
+Mysql：关系型数据库
+Redis：nosql数据结构数据库
+Hbase：nosql的分布式数据库
+
+如果把关系型数据库中的一条数据看做是key_value
+key：主键
+value：整个记录
+
+跳表：
+布隆过滤器：判断不存在就是一定不存在，判断存在不一定存在
+
+
+HBase设计思路：跳表+布隆过滤器
+HDFS没必要修改功能：很难，而且一般都是日志性文件
+
+GFS+BigTable进行存储大量数据进行增删改查
+
+
+——————————————————————————————————————————————————————————
+主节点：hmaster
+从节点：regionserver
+hbase有一定难度
+slesticserach ES分布式搜索引擎
+ELK（es,logstash,kibana）
+
+hbase是实时读写的。
+Apache HBase™ is the Hadoop database, a distributed, scalable, big data store.
+
+Use Apache HBase™ when you need random, realtime read/write access to your Big Data. This project's goal is the hosting of very large tables -- billions of rows X millions of columns -- atop clusters of commodity hardware. Apache HBase is an open-source, distributed, versioned, non-relational database modeled after Google's Bigtable: A Distributed Storage System for Structured Data by Chang et al. Just as Bigtable leverages the distributed data storage provided by the Google File System, Apache HBase provides Bigtable-like capabilities on top of Hadoop and HDFS.
+
+HDFS：存储
+HBase：实时查询，依赖于HDFS做底层存储，依赖于MapReduce做数据计算，依赖于zookeeper做服务协调。
+MapReduce：计算
+hive：读模式，存储进入hive的时候，不关心你塞入了什么数据，真正解析/读取的时候才
+mhsql：写模式  往存储系统中写入数据的时候需要进行严格的格式校验
+hbase：无模式，都是存储成为字节格式
+
+hbase是一个思维结构：rowkey columns column timestamp
+
+写数据采用追加：
+	WAL机制：保证数据安全和效率
+	支撑数据安全呢add........delete在合并
+			就是把数据操作的数据在内存中，日志在磁盘中
+			1：所有的数据，都在磁盘中和内存中存储了完整的
+			2：所有的数据写入，都是先写日志，然后再更新到内存。
+
+介于noSQL和RDBMS之间
+不支持复杂的事务，只支持行级事务
+hbase底层存储的全是字节
+主要用来存储结构
+
+
+
+hbase架构：
+client
+server
+	主节点：hmaster
+	从节点：hregionserver
+hbase依赖于：
+	hdfs做从存储
+	zookeeper做协调

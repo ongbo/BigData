@@ -1,0 +1,180 @@
+
+布隆过滤器
+OLAP  OLTP
+
+CentOS 7平台上安装
+安装：
+
+先安装数据库：									mysql
+检查是否自带	mysql：								rpm -qa | grep mysql
+将自带的删除
+												rpm -e mysql　　// 普通删除模式
+												rpm -e --nodeps mysql　　// 强力删除模式，如果使用上面命令删除时，提示有依赖的其它文件，则用该命令可以对其进行强力删除
+安装wget	：										yum install wget
+使用wget下载包：									wget http://repo.mysql.com/mysql80-community-release-el7-2.noarch.rpm
+												rpm -ivh mysql80-community-release-el7-2.noarch.rpm
+												yum update
+我在CentOS中安装mysql-server会说缺少deltarpm		yum provides '*/applydeltarpm'    #查看依赖包的位置
+												yum -y  install deltarpm             #安装命令
+安装mysql										yum install mysql-server		等待一段时间
+
+权限设置：										chown mysql:mysql -R /var/lib/mysql
+初始化 mysql：  									mysqld --initialize
+启动 mysql： 									systemctl start mysqld
+查看 MySQL 运行状态： 							systemctl status mysqld
+
+
+
+
+hadoop完全分布式集群安装
+现在一台机子上搞到
+
+
+
+
+
+
+
+
+
+
+
+
+
+	tar -xzvf hive-x.y.z.tar.gz
+	cd hive-x.y.z
+	export HIVE_HOME={{pwd}}
+	export PATH=$HIVE_HOME/bin:$PATH
+
+启动hive
+先启动hadoop集群
+
+
+把hive启动为一个后台服务
+启动beeline客户端工具去链接
+
+基本操作：
+DDL：define：定义
+DML：manag：管理
+DQL：查询
+
+
+-----------------------------------------------------------DDL--------------------------------------------------------------------
+
+
+1：库操作
+	创建库：create database dbname;
+			create database if not existsdbname;
+	删除库：使用if exists忽略异常
+			drop database dbname :非空删不了
+			drop database hadoop restrict;默认方式
+			drop database hadoop cascade；
+	查询库列表信息
+		show databases;
+	查询正在使用的库：
+		select current_database();
+	切换库：
+		use dbname;
+	查询库的详细信息：
+		desc database dbname;
+
+表：
+
+创建表：
+
+1：创建默认的内部表：
+	create table dbname(列信息) row format delimited fields terminated by ",";
+2:创建外部表
+	create table dbname() row format delimited fields terminated by "," location "路径"；
+
+
+创建表：create table 【if not exists】 table_name
+
+复制表：create table dbname1 like dbname2；只复制表的定义，不复制表的数据
+
+3.创建分区表：
+	create external table dbname() partitioned by (分区字段city string) row format delimited fields terminated by "," localtion "路径"
+		添加分区：alter table dbname add aprtition(分区字段city="beijing"),如果某张表示分区表，那么每个分区的定义，其实就表现为了这张表的数据存储目录下的一个子目录，如果是分区表，那么数据文件一定要存储正在某个分区中，而不能直接存储在表中。
+4.分桶表：
+	create table dbname() clustered by (字段) sorted by (字段) into 4 buckets row format delimited fields terminated by ",";
+5.使用CTAS创建表：
+	create table dbname as select 
+6.复制表结构
+	create table student_copy like student;
+	如果在talbe前面加external复制出来就是外部表
+	如果在table前面没有加external，复制出来就是内部表
+
+
+
+查看表：
+
+查看表列表
+	show tables 【in dbname】；查看当前tables或者dbname
+	show tables like 'A*' in dbname:表示查询dbname库里面的以A开头的表
+查看表的详细信息：
+	desc tablename;
+	desc extended  tablename;
+	desc formatted tablename;
+	show partitions 分区定义;
+
+查看表的详细建表信息：
+	show create table tablename;
+
+清空表：truncate table tablename;
+删除表：drop table student；
+修改表：
+	修改表名：alter table tablename rename to newtablename;
+	修改字段定义：
+		增加一个字段：alter table tablenae add column 
+		修改一个字段定义：alter table tablename change 字段1 new字段1 类型；
+		删除一个字段：不支持
+		替换所有字段：alter table student replace columns (替换的字段)；int可以改成string string不可以改成int，所以一定要注意类型是否匹配
+
+
+修改分区信息：
+ 1：添加分区： 
+ 			静态分区：alter table 分区表名 add partition(分区字段) partition(分区字段) ......
+ 			动态分区：
+ 2：修改分区：
+ 			一般修改分区数据存储目录
+ 			alter table tablename add if not exists partition() location '路径' partition(字段) localtion '路径'；
+
+ 			修改已经指定号的分区的数据存储目录：
+ 			alter table tablename partition(字段）set localtion '路径'；
+3:删除分区：
+			alter table tablename drop partition (字段)
+
+
+
+----------------------------------------------------------DML--------------------------------------------------
+
+1:导入数据
+	load方式装载数据
+		load data local inpath "/home/hadoop/t.txt" into table lsls;
+		load data 【overwirte覆盖，清空，导入】into table tablename：
+		local inpath：从本地路径导入
+		inpath：不要local就是从hdfs上面导入。如果从hdfs导入，原来hdfs目录中的数据文件就没有了
+			由于删除内部表时，会会删除数据。
+	insert插入数据：先创建一个临时表来保存insert的结果，然后把临时表的数据移动到表
+		insert into tablename(字段) values ()：
+		insert  into tablename select * from tablename2 where 条件
+			比如：insert into stu select * from stu_copy where id<5;stu和stu_copy的字段一样
+		多重插入降低整体任务的复杂度：主要减少原表的数据扫描次数
+		from ...
+		insert     select
+		insert     select
+		insert     select
+		动态分区插入：
+			insert into table stu partition(department) select id,name,department,sec,age from stu1;
+
+
+
+2：查询
+	select count(disinct age) from...join...on....where.....froup by ....order by...limit....
+	例如：
+	select * from student order by age desc;
+	select * from student sort by age desc;sort是多个ruduceTask
+
+
+	cluster by age===distribute by age sort by age;
+	cluster by和sort by 没有办法通用

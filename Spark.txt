@@ -1,0 +1,340 @@
+——————————————————————————————————————————————————————————————spark产生——————————————————————————————————————————————————
+scala spark
+hadoop生态体系：hdfs+zookeeper+mapreduce/hive+hbase+storm+mahout+其他工具
+Hive产生就是为了解决MapReduce编程复杂的问题
+Spark产生就是为了解决MapReduce计算缓慢的问题
+		为了替代mapreduce
+	存在的问题：Hive和mahout等等是否能兼容spark？答案：Spark的根本任务就是取代mapreduce计算，设计一个统一的计算引擎解决所有的各种类型的计算。
+													1：离线批处理
+													2：交互式查询
+													3：流式处理
+													4：图计算
+													5：机器学习
+													6：SparkR科学计算，数据分析
+hadoop会被spark取代吗？   不会！！！！只能做计算。
+不管是什么数据，存储在哪里，spark都能读。
+
+spark是一个统一的计算引擎，能够完美的融入hadoop生态体系！！！！！！！！！！！！！
+
+
+Spark和MapReduce对比时候的优势
+1：减少磁盘IO
+	mapreduce：基于磁盘
+	spark：基于内存（所以spark程序所占用的内存会非常大）
+2：增加并行度
+	mapReduce：MapTask ReduceTask Jvm task 一个进程一个Task
+	spark：shuffleMapTask ResultTask 使用的是一个线程执行
+		一个操作系统可以并发运行多个进程
+		一个进程可以并发运行多个线程
+3：避免重复计算--可以吧数据强制持续化到内存中，
+task1->task2->task3->task4->
+	一个task执行完，数据会尽量放在内存中
+	如果一个task7基于task2做计算，可以让task2的数据永久保存在内存中，也就是说一个task被多个task所使用，那么就会永久保存在内存中。
+4：可选的shuffle和排序
+	可选的shuffle
+		mapreduce：提供通用的shuffle：Combiner partitioner sorter shuffle的策略是一个固定的套路
+					如果设置了combiner会执行combiner
+					如果设置了reducetask的个数超过1，那么partitioner就会执行数据分区
+					如果有reducer阶段的话，那么sorter的数据排序一定会执行
+
+					以上三点都是有mapreduce编程模型决定的
+		spark：
+			四种shuffle策略：
+				hashshuffle
+				sortshuffle
+	可选的排序：
+		mapreduce：
+			如果有reducer阶段的话，那么sorter的数据排序一定会执行	
+		spark：用户想排序就指定排序，否则不排序
+5：灵活的内存管理策略
+	要多少给多少，可以合理的分配到底哪个阶段，哪个组件，使用多少
+	mapreduce：maptask jvm在启动的时候就指定了最多能使用多少内存，如果超过，OOM
+	spark：worker（从节点）启动了很多的进程excutor，
+			每一个executor并发运行了很多线程：thread
+			每一个线程执行一个程序
+			每一个executor和每一个task都会指定固定的内存大小去使用。
+			如果oexecutor的内存固定，task的内存使用也有上限
+			但是saprk的任务线程除了使用jvm的内存之外，还可以使用操作系统的内存
+
+	
+
+———————————————————————————————————————————————————spark相关理论——————————————————————————————————————————————————————————
+
+spark编程套路：Core Sql Streaming
+	1：获取编程入口
+		SparkContext
+		SQLContext/HiveContext
+		StreamingContext
+	2：通过编程入口加载数据
+		RDD
+		DataFrame
+		DataSet
+	3：对数据进行处理得到结果（scala的对象或者集合）
+		各种算子（80个operators）
+	4：对结果进行处理
+		测试：打印
+		线上：存储到各种数据存储地（文件系统+数据库）
+
+
+Spark  主从结构：   Master worker
+	spark的 源码是scala，scala吧源码编译成calss在jvm上执行。
+	JDK一定要装
+	SDK最好也要装
+————————————————————————————————————————————————————————————————————————————————————————
+spark.read.textFile();记住这个命令，但是没哟实质性的去加在这个数据
+eeDs.cache();也只是记住将来这个eeDS数据集要缓存在内存中，但是也没有执行
+eeDs.count()第一次计算的时候，就会执行前面的操作。
+eeDs.count();因为eeDS被缓存在内存中，这次会快一点。
+————————————————————————————————————————————————————————————————————————————————————————————————————————
+
+spark任务提交：
+1：
+spark-submit 
+--class 类
+--master spark://hosts:post
+--executor-memory 512M
+--total-executor-cores numbers
+jar包
+参数
+
+2：
+spark-shell
+--master
+--executor-memory
+--total-executor-cores 
+
+3：run-example
+
+spark程序
+1:编程入口
+2：数据抽象
+3：操作方式、算子 faltmap map ruducebykey collect
+————————————————————————————————————————————————————————————————————————————————————————————————————————————————————
+spark核心功能：
+	底层数据源：hdfs，amazon，hbase
+	本地运行模式，standalone， mesos，yarn
+	......
+	SparkContext：
+		SparkContext隐藏了网络通信、分布式部署、消息通信、存储体系、计算引擎、度量系统、文件服务、WEB UI等内容，应用程序开发者只需要使用SparkContext提供的API完成功能开发。
+		在正式提交应用程序之前，首先需要初始化SparkContext。
+		DAGSchedler：大脑
+			负责创建application->job->stage->task
+		TaskScheduler：秘书
+			负责进行任务的派发
+	存储体系：
+		优先考虑内存存储-
+		BlockManager：
+	计算引擎：
+		DAGScheduler将application拆分成DAG，就是执行流程，必须等一个stage完成，下一个stage才能开始
+		DAG：有向无环图
+	部署模式：
+		standalone，yarn，mesos，kubernets,cloud
+
+spark扩展功能：
+应用模块：
+	SparkSql：
+	SparkStreaming：
+	GraphX：
+	Spark MLlib：
+	SparkR，PySpark：
+核心执行引擎：
+	spark-core
+
+
+————————————————————————————————————————————————————spark核心概念——————————————————————————————————
+Application		Application jar
+
+
+spark: master(resourcemanager)    worker(nodemanager)
+
+Driver
+
+job：工作：按照是否需要要得到一个scala集合或者对象的数据时候调用一个
+stage:阶段：按照是否有shuffle依赖
+task：任务：
+
+Deploy mode：
+	client：Driver在client
+	cluster：Driver在cluster
+
+——————————————————————————————————————————————————————————spark基本架构————————————————————————————————————————————————————————————
+
+cluster manager：
+	spark集群管理器，主要负责资源的分配与管理。但是并不负责Executor的资源分配
+Master：spark集群主节点
+worker：spark集群的工作节点。对spark应用程序来说，由集群管理器分配得到的资源的worker节点主要负责创建executor，将资源和任务进一步分配给executor			同步资源信息给cluster manager
+Executor：执行计算任务的一些进程。
+
+
+——————————————————————————————————————————————————————spark编程模型————————————————————————————————————
+1：初始化编程入口
+2：通编程入口加载数据目录
+3：对数据进行出出力
+4：对结果数据进行处理
+5：关闭程序入口
+
+————————————————————————————————————————————————————RDD：resilient Distribute database）————————————————————————————————
+RDD：弹性分布式数据集
+	不可变：没法增删改查，就是一种描述方式的抽象
+	可分区：数据集太庞大，需要分布式存储
+	里面的元素可并行计算：
+RDD[T]
+RDD[T,S]
+
+RDD五大属性：
+	1:A list of partitions:
+	2:a function for computing each split:计算每个分区有一个函数计算
+		block和split:只考虑存储情况的时候，每一个数据分区，就是一个block
+		在考虑数据计算的时候，每个分区或者每个task要执行的数据的整体，其实就是一个split
+	3:a list of dependencies on other RDDS:某些rdd可能做某个操作编程rdd2，就是有向无环图的由来
+	4：Optionally(可选的),a partitioner for key-value RDDs：
+		RDD[(T,S)]:可以进行sortByKey,groupByKey,reduceByKey,CcombineByKey
+		Partitioner:其实就是制定一个规则，作用在某个数据集上，决定这个数据按照什么样的形式或者方法进行分区。
+	5:Optionally,a list of preferred locations to compute each split on(block locations for on HDFS file)
+
+创建RDD的方式：并行化scala数据集makeRDD
+				应用一个外部存储系统的数据集textFile
+
+宽依赖算子：一个父分区有多个子分区，一个父分区的数据就被拆分了————————————非独生关系
+窄依赖算子：一个父分区只有一个子分区，尽管一个子分区有多个父分区——————————独生关系
+	全大部分情况下：如果有shuffle操作，就是宽依赖，但是不完全正确
+	join是宽依赖还是窄依赖：
+		假设有rdd1[ptn1,ptn2],rdd2[ptn3,ptn4]
+		做操作rdd1.join(rdd2)=rdd
+		1）可能有ptn1和ptn3连接，ptn2和ptn4连接，也就是说两个rdd的分区规则一样。
+		2）可能rdd1中的分区和rdd2中的任意几个分区连接，就是宽依赖
+
+————————————————————————————————————————————————————————RDD分类——————————————————————————————————————————————
+Transformation算子：转换
+	RDD->RDD
+	遇到Transformation算子时，并不执行真正的计算
+Action算子：行动
+	RDD->Scala集合或者Scala对象
+		collect,first,count
+
+
+
+————————————————————————————————————————————————————Spark基本执行流程——————————————————————————————————————————
+四个阶段：
+
+	一：RDD的转换，形成一个DAG（有向无环图，执行流程）
+	二：DAGScheduler
+			将DAG（job）拆分成stage（阶段），再讲stage拆分成tasks（Task set）——————规划
+			将stage提交给TaskScheduler
+	三：TaskScheduler接收stage，就是接收Task set。通过集群管理器加载任务——————————调度执行
+	四：Worker：派发过来的task在线程中执行
+
+
+-————————————————————————————————————————————————spark运行流程——————————————————————————————————————————————
+
+1：编写代码
+
+    SparkContext sc=new SparkContext(sparkConf)//sparkContext对象初始化
+    .collect//编写代码过程中，最后需要提供一个action算子来触发任务提交和执行
+    	所有的action算子的内部实现都是sc.runJob
+    	action算子触发真正的任务提交
+    	transformation算子的内部根本没有sc.runJob这句代码
+2：打成jar包，上传到服务器
+3：使用spark-submit命令去提交任务
+	spark-submit --class xxxx --executor-memory xxx /home/hadoop/xxx.jar  args1 args2....
+	spark-submit命令提交任务之后
+	我们自然就想到，最后要执行我们提交的那个任务类
+	hadoop jar --------------------->java xxx.class
+	spark-submit------最终转成------->java xxx.class
+	脚本：写好一个提交程序，帮助我们使用shell的方式来提交任务
+	最终切入到java程序入口
+4：开始执行我们自己编写的代码
+	1）：初始化SparkContext，sparkcontext执行各种处理
+	2）：触发action操作提交任务runjob执行
+
+
+详细步骤20步
+——————————————————————————————————————————————sparkContext初始化————————————————————————————————————————————
+1:
+sparkcontext里面有很多属性：
+		最重要三个：taskscheduler，dagscheduler，schedulerBackend
+	//初始化SchedulerBackend和TaskScheduler
+	val (sched,ts)=SparkContext.createTaskScheduler(this,master,deployMode)
+	_schedulerBackend=sched
+	_taskScheduler=ts
+	//初始化DAGScheduler
+	_dagscheduler=new DAGScheduler(this)
+	_heartbeatReceiver.ask[Boolean](TaskSchedulerIsSet)
+
+	_taskScheduelr.start()
+
+2:
+
+	初始化schedulerBAckend和taskscheduler后
+	就调用taskscheduler.start
+	其中TaskSchedulerImpl的start方法里面就是调用乐schedulerBackend.start
+		1）调用super.start
+			父类的start中创建了driverActor（driverActor,就是ClientEndpoint），与worker通信
+		2）
+			client=new StandaloneAppclient()
+			client.start
+			。。。。。
+			发送信息（RegisterApplication（包含应用程序的描述信息），RegisterWithMaster）到master节点上（Spark集群主节点）
+			master：waitingApps：ArrayBuffer FIFO任务队列
+					waitingApps+=app；（waitingApps相当于master端的任务队列，每当一个应用程序发过来，就会加入waitingapps完成注册）
+					
+		——————————————————master将消息executorRunner发送给worker——————————————————
+			Worker：每个Executor启动ExecutorBackend
+					ExecutorBackend：里面启动一个线程池
+				launchDriver（worker，driver）启动了ExecutorBackend
+				startExecutorOnWorkers：
+					给executor分配资源launchExecutor（worker，exec）启动加载运行Executor
+					Executor过程：
+						线程池初始化，成功的话就是Executor初始化完成了
+						等待任务提交
+		——————————————————worker将executor启动成功后返回消息个master——————————————————
+			
+			worker的executor要注册到Driver端的schudulerBackend中的clusterActor
+
+	master注册
+	worker负责启动executor
+
+
+
+	——————————————————————————————————————————————————————算子————————————————————————————————————————————
+	当一个程序中，碰到第一个action算子操作的时候，就相当于触发了sc.runjob方法执行
+		转到SparkContext中的dagScheduler.runjob
+		进而转到DAGScheduler中的submitJob
+		进而转到eventProcessLoop.post提交JobSubmit
+		转到dagscheduler.handleJobsubmitted
+		finalstage=createResultStage//	切分stage
+		val job=new ActiveJob//      激活job
+		submitstage//提交stage
+		submitMissingTasks(stage,jobId.get)//提交任务
+		taskscheduler.sbumittasks//
+		在DAGscheduler的submitMissingTasks，最后将stage变成了一个TaskSet对象，最终转到taskScheduler中的ssubmitTasks中执行
+
+	要点核心结论：
+			Dagscheduler会给每一个job切分成多个stage，然后把每一个stage提交给taskScheduler中执行
+			从action算子开始，到吧stage变成TaskSet提交到taskScheduler中区执行
+
+
+————————————————————————————————————————Spark任务的任务执行流程——————————————————————————————————————
+1：编写的程序打成jar包
+2：调用spark-submit脚本提交任务到集群上执行
+3：运行sparkSubmit的main方法，在这个方法中通过反射方式创建我们编写的主类的实例对象，然后调用main方法，开始执行我们的代码（我们的spark程序中的driver就运行在sparkSubmit进程中）
+4：当代码运行到创建sparkContext对象时，就开始初始化SparkContext
+5：在初始化SparkContext对象的时候，会创建两个特别重要的对象，就是DAGScheduler和TaskScheduler
+		DAGScheduler将RDD的依赖切分成一个一个的stage，然后将stage作为taskSet提交给TaskScheduler
+6：在构建TaskScheduler的同时，会创建两个非常重要的对象，分别是DriverActor和ClientActor
+		clientActor：向master注册用户提交的任务
+		DriverActor：接收executor的反向注册，将任务提交给executor
+7：当clientActor启动后，会将用户提交的任务和相关的参数封装到ApplicationDescription对象中，然后提交给master进行任务的注册
+8：当master接收到clientActor提交的任务请求时，会将请求参数进行解析，并封装成Application，然后将其持久化，然后将其加入到任务队列waitingApps中
+9：有FIFO 当轮到我们提交的任务运行时，就开始调用schedule，进行任务资源调度
+10：master将调度好的资源封装到launchExecutor中发送给指定的worker
+11：worker接收到maser发送来得launchExecutor时，会将其解压到ExecutorRunner中，然后调用这个对象的start，启动executor
+12：executor启动后会向DriverActor进行反向注册
+13：driverActor会发送注册成功的消息的Executor
+14：Executor接收到DriverActor注册成功的消息后会创建一个线程池，用于执行DriverActor发送过来的task任务
+15：当属于这个任务地所有的EXEcutor启动并反向注册成功后，就意味这运行这个任务的环境已经准备好了，driver会结束SparkContext对象的初始化，也就意味着new SparkCopntext这句代码运行完成
+16：当初始化sc成功后，driver端就会继续运行我们编写的代码，然后开始创建初始的RDD，然后进行一系列转换操作，当遇到一个action算子时，也就意味这发了一个job
+17:dirver会将这个job提交给DAGScheduler
+18：DAGScheduler将接收到的job，从最后一个算子向前推到，将DAG以及宽依赖划分成一个一个的stage，然后将stage封装成taskSet，并将taskSet中的task提交给DriverActor
+19：DriverActor接收到DAGScheduler发送过来的task，会拿到一个序列化器，对task进行序列化，然后将序列化好的task封装到launchTask中，然后将launchTAsk发送给指定的EXecutor
+20：Executor接收到了DriverActor发送过来的launchTask时，会拿到一个反序列化器，对launchTask进行反序列化，封装到TaskRunner中，然后从EXecutor这个线程池中获取一个线程，将反序列化好的任务中的算子作用在RDD对应的分区中。
